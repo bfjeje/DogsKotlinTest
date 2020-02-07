@@ -33,13 +33,9 @@ class DetailFragment : Fragment() {
         //The ? means that arguments can be null
         arguments?.let {
             dogUuid = DetailFragmentArgs.fromBundle(it).dogUuid
-            textView2.text = dogUuid.toString()
+
         }
 
-        buttonList.setOnClickListener {
-            val action: NavDirections = DetailFragmentDirections.actionListFragment()
-            Navigation.findNavController(it).navigate(action)
-        }
 
     }
 
