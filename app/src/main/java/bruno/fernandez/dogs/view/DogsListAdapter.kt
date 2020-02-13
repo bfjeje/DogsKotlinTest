@@ -3,6 +3,7 @@ package bruno.fernandez.dogs.view
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.navigation.Navigation
 import androidx.recyclerview.widget.RecyclerView
 import bruno.fernandez.dogs.R
 import bruno.fernandez.dogs.model.DogBreed
@@ -28,6 +29,9 @@ class DogsListAdapter(val dogsList: ArrayList<DogBreed>) :
         //I get the attributes of the holder from the layout
         holder.view.name.text = dogsList[position].dogBreed
         holder.view.lifespan.text = dogsList[position].lifespan
+        holder.view.setOnClickListener {
+            Navigation.findNavController(it).navigate(ListFragmentDirections.actionDetailFragment())
+        }
     }
 
     fun updateDogList(newDogsList: List<DogBreed>) {
