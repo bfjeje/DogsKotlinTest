@@ -12,6 +12,8 @@ import androidx.navigation.NavDirections
 import androidx.navigation.Navigation
 
 import bruno.fernandez.dogs.R
+import bruno.fernandez.dogs.util.getProgressDrawable
+import bruno.fernandez.dogs.util.loadImage
 import bruno.fernandez.dogs.viewmodel.DetailViewModel
 import kotlinx.android.synthetic.main.fragment_detail.*
 
@@ -34,26 +36,34 @@ class DetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //Here we get the viewModel and put it into our view
-        viewModel = ViewModelProviders.of(this).get(DetailViewModel::class.java)
-        viewModel.fetch()
-
         //The ? means that arguments can be null
         arguments?.let {
+            //Here we retireve the Uuid
             dogUuid = DetailFragmentArgs.fromBundle(it).dogUuid
         }
+
+        //Here we get the viewModel and put it into our view
+        viewModel = ViewModelProviders.of(this).get(DetailViewModel::class.java)
+        //Challenge Database
+        //Second: pass uuid
+        viewModel.fetch(dogUuid)
 
         observeViewModel()
     }
 
     private fun observeViewModel() {
-
         viewModel.dogLiveData.observe(this, Observer { dog ->
             dog?.let {
                 dogName.text = dog.dogBreed
                 dogPurpose.text = dog.bredFor
                 dogTemperament.text = dog.temperament
                 dogLifepan.text = dog.lifespan
+                //Challenge Database
+                //Third: put the image in the right place
+                context?.let {
+                    //it makes reference to context in this case
+                    dogImage.loadImage(dog.imageURL, getProgressDrawable(it))
+                }
             }
         })
     }

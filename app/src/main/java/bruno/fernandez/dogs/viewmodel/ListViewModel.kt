@@ -1,11 +1,13 @@
 package bruno.fernandez.dogs.viewmodel
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import bruno.fernandez.dogs.model.DogBreed
 import bruno.fernandez.dogs.model.DogDatabase
 import bruno.fernandez.dogs.model.DogsApiService
+import bruno.fernandez.dogs.util.SharedPreferencesHelper
 import io.reactivex.Scheduler
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
@@ -19,19 +21,44 @@ import kotlinx.coroutines.launch
 * The viewmodel knows nothing about the view.*/
 class ListViewModel(application: Application) : BaseViewModel(application) {
 
+    //SharedPreferences chapter
+    private var prefHelper = SharedPreferencesHelper(getApplication())
+    private var refreshTime = 5 * 60 * 1000 * 1000 * 1000L //5 minutes
+
     //Lecture 8
     private val dogService = DogsApiService()
-    //allows us to observe the observable without worrieng about get rid of it. Avoids memory leaks
+    //allows us to observe the observable without worring about get rid of it. Avoids memory leaks
     private val disposable = CompositeDisposable()
-
 
     //dogs provides the real list of dogs into the List<DogBreed>, and it gets it from the data source
     val dogs = MutableLiveData<List<DogBreed>>()
     val dogsLoadError = MutableLiveData<Boolean>()
     val loading = MutableLiveData<Boolean>()
 
+    //Modified for the sharedpreference chapter
     fun refresh() {
+        val updateTime = prefHelper.getUpdateTime()
+        //if the current time - refresh time is lower than 5 minutes, i refresh from db
+        if (updateTime != null && updateTime != 0L && System.nanoTime() - updateTime < refreshTime) {
+            fetchFromDatabase()
+        } else {
+            fetchFromRemote()
+        }
+    }
+
+    fun refreshBypassCache() {
         fetchFromRemote()
+    }
+
+    private fun fetchFromDatabase() {
+        loading.value = true
+        //This is because we do it with coroutines
+        launch {
+            val dogs = DogDatabase(getApplication()).dogDao().getAllDogs()
+            dogsRetrieved(dogs)
+            Toast.makeText(getApplication(), "Dogs retrieved from database", Toast.LENGTH_SHORT)
+                .show()
+        }
     }
 
     //this retrieves data from remote. We put this into a new function, because in the future we
@@ -48,6 +75,11 @@ class ListViewModel(application: Application) : BaseViewModel(application) {
                 .subscribeWith(object : DisposableSingleObserver<List<DogBreed>>() {
                     override fun onSuccess(dogList: List<DogBreed>) {
                         storeDogsLocally(dogList)
+                        Toast.makeText(
+                            getApplication(),
+                            "Dogs retrieved from endpoint",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
 
                     override fun onError(e: Throwable) {
@@ -58,6 +90,7 @@ class ListViewModel(application: Application) : BaseViewModel(application) {
 
                 })
         )
+
     }
 
     private fun dogsRetrieved(dogList: List<DogBreed>) {
@@ -82,6 +115,10 @@ class ListViewModel(application: Application) : BaseViewModel(application) {
             }
             dogsRetrieved(list)
         }
+        //This stores the information of the moment when we have updated our database with the dog
+        // information retrieved. Allows us to decide if we want to refresh from database or server.
+        // It`s part of sharedPreferences
+        prefHelper.saveUpdateTime(System.nanoTime())
     }
 
     override fun onCleared() {
